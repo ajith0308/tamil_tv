@@ -45,7 +45,8 @@
     osd: $('#osd'), osdNum: $('#osd-num'), osdLogo: $('#osd-logo'), osdName: $('#osd-name'), osdFav: $('#osd-fav'),
     osdGroup: $('#osd-group'), osdQuality: $('#osd-quality'), osdClock: $('#osd-clock'), osdDate: $('#osd-date'), osdEpg: $('#osd-epg'),
     search: $('#search'), chips: $('#chips'), channels: $('#channels'), listCount: $('#list-count'), epgStatus: $('#epg-status'),
-    remote: $('#remote'), favBtn: $('#fav-btn'), muteBtn: $('#mute-btn'), listBtn: $('#list-btn'), vol: $('#vol'),
+    remote: $('#remote'), favBtn: $('#fav-btn'), muteBtn: $('#mute-btn'), listBtn: $('#list-btn'),
+    chbadge: $('#chbadge'), cbNum: $('#cb-num'), cbName: $('#cb-name'),
     epg: $('#epg'), epgScroll: $('#epg-scroll'), epgInner: $('#epg-inner'), epgDetail: $('#epg-detail'), epgOnly: $('#epg-only'),
     settings: $('#settings'), help: $('#help'), plUrl: $('#pl-url'), plLoad: $('#pl-load'), plFile: $('#pl-file'),
     plCurrent: $('#pl-current'), presets: $('#presets'), epgUrl: $('#epg-url'), epgLoad: $('#epg-load'),
@@ -719,6 +720,7 @@
     LS.set('lastUrl', ch.url);
     el.osdQuality.hidden = true;
     play(ch);
+    showChBadge(ch);
     showOsd();
     markPlaying(scroll);
     updateFavUI();
@@ -732,18 +734,42 @@
     const l = all.filter(inGroup(S.group));
     return l.length ? l : all;
   }
-  function neighbour(dir) {
+  function neighbour(dir, from = S.channels[S.cur]) {
     const l = zapList();
     if (!l.length) return null;
-    let pos = l.indexOf(S.channels[S.cur]);
+    let pos = l.indexOf(from);
     if (pos < 0) {
-      const curNum = S.channels[S.cur]?.num ?? 0;
+      const curNum = from?.num ?? 0;
       pos = dir > 0 ? l.findIndex((c) => c.num > curNum) - 1 : l.findIndex((c) => c.num >= curNum);
       if (pos < -1) pos = dir > 0 ? l.length - 1 : 0;
     }
     return l[(pos + dir + l.length) % l.length];
   }
-  function zap(dir) { const next = neighbour(dir); if (next) tune(next.num - 1); }
+  // TV-like zapping: the first press tunes at once; quick repeated presses just flip
+  // the number on screen and tune when you stop (like a set-top box).
+  let zapTarget = null, zapTimer = 0, lastZapAt = 0;
+  function zap(dir) {
+    const next = neighbour(dir, zapTarget || S.channels[S.cur]);
+    if (!next) return;
+    const quick = Date.now() - lastZapAt < 700;
+    lastZapAt = Date.now();
+    clearTimeout(zapTimer);
+    if (!quick && !zapTarget) { tune(next.num - 1); return; }
+    zapTarget = next;
+    showChBadge(next, true);
+    zapTimer = setTimeout(() => { const t = zapTarget; zapTarget = null; if (t) tune(t.num - 1); }, 550);
+  }
+
+  let cbTimer = 0;
+  function showChBadge(ch, pending = false) {
+    if (!el.num.hidden) return;              // digits being typed take that corner
+    el.cbNum.textContent = ch.num;
+    el.cbName.textContent = cleanName(ch.name) || ch.name;
+    el.chbadge.classList.toggle('pending', pending);
+    el.chbadge.hidden = false;
+    clearTimeout(cbTimer);
+    cbTimer = setTimeout(() => { el.chbadge.hidden = true; }, pending ? 2000 : 3500);
+  }
   function lastChannel() { if (S.last >= 0) tune(S.last); else toast('No previous channel yet'); }
 
   let numBuf = '', numTimer = 0;
@@ -751,6 +777,7 @@
     if (!S.channels.length) return;
     const maxLen = String(S.channels.length).length;
     numBuf = (numBuf + d).slice(-maxLen);
+    el.chbadge.hidden = true;
     el.num.hidden = false;
     el.num.classList.remove('bad');
     el.num.textContent = numBuf.padEnd(maxLen, '-');
@@ -823,6 +850,11 @@
   // Volume / favorites
   // ==================================================================
   let volTimer = 0;
+  const volLevel = () => Math.round(el.video.volume * 100);
+  function stepVolume(d) {
+    if (el.video.muted && d > 0) { el.video.muted = false; LS.set('muted', false); }
+    setVolume((volLevel() + d) / 100);
+  }
   function setVolume(v, show = true) {
     v = Math.max(0, Math.min(1, Math.round(v * 100) / 100));
     el.video.volume = v;
@@ -836,10 +868,10 @@
     const icon = m ? '🔇' : v < 0.4 ? '🔈' : v < 0.75 ? '🔉' : '🔊';
     el.volIcon.textContent = icon;
     el.muteBtn.textContent = icon;
-    el.volFill.style.width = (m ? 0 : v * 100) + '%';
+    el.volFill.style.height = (m ? 0 : v * 100) + '%';
     el.volVal.textContent = m ? 'MUTE' : Math.round(v * 100);
-    el.vol.value = Math.round(v * 100);
-    if (show) { el.volOsd.hidden = false; clearTimeout(volTimer); volTimer = setTimeout(() => { el.volOsd.hidden = true; }, 1500); }
+    el.volVal.classList.toggle('mute', m);
+    if (show) { el.volOsd.hidden = false; clearTimeout(volTimer); volTimer = setTimeout(() => { el.volOsd.hidden = true; }, 2500); }
   }
 
   function toggleFav(ch) {
@@ -1371,7 +1403,28 @@
     const b = e.target.closest('button[data-act]');
     if (b) { actions[b.dataset.act](); b.blur(); }
   });
-  el.vol.addEventListener('input', () => setVolume(el.vol.value / 100, false));
+  // Rocker keys: press once to step, hold to repeat (volume repeats faster, like a TV)
+  const holdActs = { up: () => zap(1), down: () => zap(-1), volup: () => stepVolume(1), voldown: () => stepVolume(-1) };
+  let holdTimer = 0;
+  const stopHold = () => clearTimeout(holdTimer);
+  el.remote.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('[data-hold]');
+    if (!b || e.button > 0) return;
+    e.preventDefault();
+    wake();
+    const act = holdActs[b.dataset.hold];
+    const every = b.dataset.hold.startsWith('vol') ? 70 : 300;
+    act();
+    stopHold();
+    holdTimer = setTimeout(function rep() { act(); holdTimer = setTimeout(rep, every); }, 450);
+    try { b.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => el.remote.addEventListener(ev, stopHold));
+  window.addEventListener('blur', stopHold);
+  el.remote.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-hold]');
+    if (b && e.detail === 0) holdActs[b.dataset.hold]();   // keyboard activation
+  });
 
   let idleTimer = 0, overRemote = false;
   el.remote.addEventListener('mouseenter', () => { overRemote = true; });
@@ -1427,8 +1480,8 @@
     switch (k) {
       case 'ArrowUp': case 'PageUp': case 'ChannelUp': case 'MediaTrackNext': zap(1); break;
       case 'ArrowDown': case 'PageDown': case 'ChannelDown': case 'MediaTrackPrevious': zap(-1); break;
-      case 'ArrowRight': case '+': case '=': case 'AudioVolumeUp': setVolume(el.video.volume + 0.05); break;
-      case 'ArrowLeft': case '-': case '_': case 'AudioVolumeDown': setVolume(el.video.volume - 0.05); break;
+      case 'ArrowRight': case '+': case '=': case 'AudioVolumeUp': stepVolume(1); break;
+      case 'ArrowLeft': case '-': case '_': case 'AudioVolumeDown': stepVolume(-1); break;
       case 'e': case 'E': case 'Enter': case 'Guide': openEpg(); break;
       case 'g': case 'G': case 'c': case 'C': toggleList(); break;
       case '/': if (!listOpen()) setListVisible(true); el.search.focus(); break;

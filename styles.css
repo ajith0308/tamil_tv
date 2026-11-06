@@ -176,14 +176,44 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 }
 #numentry.bad { color: #ff8090; text-shadow: 0 2px 4px #000; }
 
+/* TV-style volume: segmented vertical bar on the right edge */
 #volume-osd {
-  position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 999px;
-  background: var(--panel); font-variant-numeric: tabular-nums;
+  position: absolute; right: 28px; top: 50%; transform: translateY(-50%); z-index: 5;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: 72px; padding: 16px 0 14px; border-radius: 18px;
+  background: rgba(10, 13, 20, 0.88); border: 1px solid var(--line); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  font-variant-numeric: tabular-nums;
 }
-.vbar { width: 200px; height: 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
-#volume-fill { height: 100%; background: var(--accent); width: 100%; }
-#volume-val { width: 2.6em; text-align: right; }
+#volume-val { font-size: 26px; font-weight: 800; line-height: 1; }
+#volume-val.mute { font-size: 13px; letter-spacing: 0.08em; color: var(--live); }
+.vbar {
+  position: relative; width: 16px; height: 230px;
+  background: repeating-linear-gradient(to top, rgba(255, 255, 255, 0.14) 0 5px, transparent 5px 8px);
+}
+#volume-fill {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 100%;
+  background: repeating-linear-gradient(to top, var(--accent) 0 5px, transparent 5px 8px);
+  background-position: bottom; transition: height 0.08s linear;
+}
+#volume-icon { font-size: 20px; }
+
+/* TV-style channel number: top right */
+#chbadge {
+  position: absolute; top: 22px; right: 30px; z-index: 5; text-align: right;
+  padding: 8px 18px 10px; border-radius: 14px; background: rgba(0, 0, 0, 0.5);
+}
+#chbadge .cb-num {
+  font-size: 58px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: 0.04em;
+  color: #fff; text-shadow: 0 0 18px rgba(255, 122, 26, 0.85), 0 2px 4px #000;
+}
+#chbadge .cb-name { margin-top: 6px; font-size: 15px; font-weight: 700; color: #e6ebf3; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chbadge.pending .cb-num { color: #ffd2ad; }
+
+/* Remote rocker keys */
+.rocker { display: flex; align-items: center; flex: none; background: rgba(255, 255, 255, 0.07); border-radius: 999px; padding: 2px; }
+#remote .rocker button { padding: 7px 13px; font-size: 16px; touch-action: none; }
+#remote .rocker button:active { background: var(--accent); color: #fff; }
+.rk-label { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: var(--muted); padding: 0 2px; }
 
 /* Info banner */
 #osd {
@@ -238,7 +268,6 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 #remote button.on { color: var(--fav); }
 #remote button.active { color: var(--accent); }
 #remote .sep { width: 1px; height: 22px; background: var(--line); flex: none; }
-#vol { width: 90px; accent-color: var(--accent); flex: none; }
 
 #audio-menu {
   position: absolute; right: 24px; bottom: 76px; z-index: 6; min-width: 220px; max-height: 60%; overflow-y: auto;
@@ -388,9 +417,16 @@ kbd {
   .osd-epg { margin-top: 8px; padding-top: 8px; font-size: 12px; }
   .prog-line { grid-template-columns: 44px 92px 1fr; }
   #numentry { font-size: 38px; top: 10px; right: 10px; }
+  #chbadge { top: 10px; right: 10px; padding: 6px 12px; }
+  #chbadge .cb-num { font-size: 36px; }
+  #chbadge .cb-name { font-size: 12px; max-width: 180px; }
+  #volume-osd { right: 12px; width: 56px; padding: 10px 0; }
+  .vbar { height: 130px; width: 12px; }
+  #volume-val { font-size: 18px; }
+  #remote .rocker button { padding: 6px 9px; }
   #remote { bottom: 8px; padding: 4px 6px; }
   #remote button { padding: 6px 8px; font-size: 13px; }
-  #vol, #remote .sep { display: none; }
+  #remote .sep { display: none; }
   .status-card { padding: 14px 18px; gap: 8px; }
   .status-logo { width: 80px; height: 48px; }
   #status.nosignal .status-title { font-size: 22px; }

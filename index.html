@@ -45,10 +45,17 @@
 
     <div id="numentry" hidden></div>
 
+    <!-- TV-style volume bar (right edge) -->
     <div id="volume-osd" hidden>
-      <span id="volume-icon">🔊</span>
+      <div id="volume-val">100</div>
       <div class="vbar"><div id="volume-fill"></div></div>
-      <span id="volume-val">100</span>
+      <div id="volume-icon">🔊</div>
+    </div>
+
+    <!-- TV-style channel number (top right) -->
+    <div id="chbadge" hidden>
+      <div class="cb-num" id="cb-num"></div>
+      <div class="cb-name" id="cb-name"></div>
     </div>
 
     <!-- Info banner -->
@@ -73,8 +80,11 @@
     </div>
 
     <div id="remote">
-      <button data-act="down" title="Channel down (↓)">CH ▼</button>
-      <button data-act="up" title="Channel up (↑)">CH ▲</button>
+      <div class="rocker" title="Channel — hold to keep changing">
+        <button data-hold="down" title="Channel down (↓)">▼</button>
+        <span class="rk-label">CH</span>
+        <button data-hold="up" title="Channel up (↑)">▲</button>
+      </div>
       <button data-act="last" title="Previous channel (L / Backspace)">⟲</button>
       <span class="sep"></span>
       <button data-act="list" id="list-btn" title="Channel list (G)">☰ List</button>
@@ -83,8 +93,12 @@
       <button data-act="audio" id="audio-btn" title="Audio language (A)" hidden>🗣 Audio</button>
       <button data-act="fav" id="fav-btn" title="Favorite (S)">☆</button>
       <span class="sep"></span>
+      <div class="rocker" title="Volume — hold to keep changing">
+        <button data-hold="voldown" title="Volume down (← / -)">−</button>
+        <span class="rk-label">VOL</span>
+        <button data-hold="volup" title="Volume up (→ / +)">+</button>
+      </div>
       <button data-act="mute" id="mute-btn" title="Mute (M)">🔊</button>
-      <input id="vol" type="range" min="0" max="100" value="100" title="Volume (← →)">
       <span class="sep"></span>
       <button data-act="help" title="Shortcuts (H)">?</button>
       <button data-act="fullscreen" title="Fullscreen (F)">⛶</button>
