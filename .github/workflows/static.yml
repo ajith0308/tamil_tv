@@ -33,6 +33,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Pages
         uses: actions/configure-pages@v5
+      - name: Stamp asset versions
+        # Gives app.js / styles.css a new URL on every deploy, so browsers never
+        # mix a cached old script with a new page (that crashed the player).
+        run: sed -i "s/__VERSION__/${GITHUB_SHA::7}/g" index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
