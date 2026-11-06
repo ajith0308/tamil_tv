@@ -424,7 +424,11 @@ kbd {
   .vbar { height: 130px; width: 12px; }
   #volume-val { font-size: 18px; }
   #remote .rocker button { padding: 6px 9px; }
-  #remote { bottom: 8px; padding: 4px 6px; }
+  #remote {
+    bottom: 8px; padding: 6px; width: calc(100% - 16px); max-width: none;
+    flex-wrap: wrap; justify-content: center; row-gap: 4px; border-radius: 18px; overflow: visible;
+  }
+  #stage.idle #remote { transform: translate(-50%, 30px); }
   #remote button { padding: 6px 8px; font-size: 13px; }
   #remote .sep { display: none; }
   .status-card { padding: 14px 18px; gap: 8px; }
