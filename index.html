@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>Tamil TV</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mpegts.js@1/dist/mpegts.min.js"></script>
+</head>
+<body>
+<div id="tv" tabindex="-1">
+
+  <div id="edge"></div>
+
+  <!-- ============ Channel list (slides in over the video) ============ -->
+  <aside id="side">
+    <header class="side-head">
+      <div class="brand">தமிழ் <b>TV</b></div>
+      <span id="list-count" class="muted small"></span>
+      <button class="icon-btn" data-act="add" title="Add a channel">＋</button>
+      <button class="icon-btn" data-act="epg" title="TV Guide (E)">📅</button>
+      <button class="icon-btn" data-act="settings" title="Settings (O)">⚙</button>
+    </header>
+    <input id="search" type="search" placeholder="Search channel name or number…" autocomplete="off" spellcheck="false">
+    <div id="chips" class="chips-row"></div>
+    <ul id="channels"></ul>
+    <div id="epg-status" class="side-foot muted small"></div>
+  </aside>
+
+  <!-- ============ Video stage ============ -->
+  <main id="stage">
+    <video id="video" playsinline></video>
+    <canvas id="noise" width="200" height="112" hidden></canvas>
+
+    <div id="status" hidden>
+      <div class="status-card">
+        <div class="logo status-logo" id="status-logo"></div>
+        <div class="spinner" id="status-spinner"></div>
+        <div class="status-title" id="status-title">Tuning…</div>
+        <div class="status-sub" id="status-sub"></div>
+      </div>
+    </div>
+
+    <div id="numentry" hidden></div>
+
+    <div id="volume-osd" hidden>
+      <span id="volume-icon">🔊</span>
+      <div class="vbar"><div id="volume-fill"></div></div>
+      <span id="volume-val">100</span>
+    </div>
+
+    <!-- Info banner -->
+    <div id="osd" class="off" aria-live="polite">
+      <div class="osd-top">
+        <div class="osd-num" id="osd-num">–</div>
+        <div class="logo osd-logo" id="osd-logo"></div>
+        <div class="osd-main">
+          <div class="osd-name"><span id="osd-name">No channel</span><span id="osd-fav" class="fav-star" hidden>★</span></div>
+          <div class="osd-meta">
+            <span id="osd-group"></span>
+            <span id="osd-quality" class="badge" hidden></span>
+            <span id="osd-audio" class="badge" hidden></span>
+          </div>
+        </div>
+        <div class="osd-right">
+          <div class="osd-clock" id="osd-clock"></div>
+          <div class="osd-date" id="osd-date"></div>
+        </div>
+      </div>
+      <div class="osd-epg" id="osd-epg"></div>
+    </div>
+
+    <div id="remote">
+      <button data-act="down" title="Channel down (↓)">CH ▼</button>
+      <button data-act="up" title="Channel up (↑)">CH ▲</button>
+      <button data-act="last" title="Previous channel (L / Backspace)">⟲</button>
+      <span class="sep"></span>
+      <button data-act="list" id="list-btn" title="Channel list (G)">☰ List</button>
+      <button data-act="epg" title="TV Guide (E)">📅 Guide</button>
+      <button data-act="info" title="Info (I)">ⓘ</button>
+      <button data-act="audio" id="audio-btn" title="Audio language (A)" hidden>🗣 Audio</button>
+      <button data-act="fav" id="fav-btn" title="Favorite (S)">☆</button>
+      <span class="sep"></span>
+      <button data-act="mute" id="mute-btn" title="Mute (M)">🔊</button>
+      <input id="vol" type="range" min="0" max="100" value="100" title="Volume (← →)">
+      <span class="sep"></span>
+      <button data-act="help" title="Shortcuts (H)">?</button>
+      <button data-act="fullscreen" title="Fullscreen (F)">⛶</button>
+    </div>
+
+    <div id="audio-menu" hidden>
+      <div class="am-title">Audio language</div>
+      <div id="audio-items"></div>
+    </div>
+
+    <div id="start" hidden>
+      <button id="start-btn">▶ Click or press any key to start watching</button>
+    </div>
+  </main>
+
+  <!-- ============ TV Guide (EPG grid) ============ -->
+  <section id="epg" hidden>
+    <div class="epg-top">
+      <div class="epg-detail" id="epg-detail"></div>
+      <div class="epg-actions">
+        <label class="small muted check"><input type="checkbox" id="epg-only"> Only channels with listings</label>
+        <button id="epg-now">Now</button>
+        <button class="icon-btn" id="epg-close" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+    <div id="epg-scroll">
+      <div id="epg-inner"></div>
+    </div>
+    <div class="epg-help muted small">↑↓ channel · ←→ programme · Enter watch · Esc close</div>
+  </section>
+
+  <!-- ============ Settings ============ -->
+  <div id="settings" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Settings</h2>
+        <button class="icon-btn" data-close>✕</button>
+      </div>
+
+      <h3>Channels</h3>
+      <div class="chips" id="presets"></div>
+      <label for="pl-url">Or your own M3U playlist URL</label>
+      <div class="row">
+        <input id="pl-url" type="url" placeholder="https://example.com/playlist.m3u" spellcheck="false">
+        <button id="pl-load" class="primary">Load</button>
+      </div>
+      <div class="row">
+        <label class="btn">Open file…<input id="pl-file" type="file" accept=".m3u,.m3u8,audio/x-mpegurl,application/vnd.apple.mpegurl,text/plain" hidden></label>
+        <span class="muted small" id="pl-current"></span>
+      </div>
+
+      <h3>Language</h3>
+      <label class="check-row"><input type="checkbox" id="tamil-only">
+        <span><b>Hide channels without Tamil audio</b><br>
+        <span class="muted small">Discovery, Animal Planet, Cartoon Network, Pogo, Sony, sports and other feeds that play in Hindi, English or other languages.</span></span></label>
+      <div class="row">
+        <span class="muted small" id="hidden-count"></span>
+        <button id="unhide-all" class="small-btn">Show all</button>
+      </div>
+      <ul id="hidden-list" class="custom-list hidden-list"></ul>
+
+      <h3 id="add-section">Add a channel</h3>
+      <p class="muted small">Missing a channel? Paste its live stream link (usually ends in .m3u8). It's added under “My channels” and kept after reload.</p>
+      <div class="add-grid">
+        <input id="add-name" type="text" placeholder="Channel name, e.g. Nijayam TV" spellcheck="false">
+        <input id="add-url" type="url" placeholder="Stream URL, e.g. https://…/live/index.m3u8" spellcheck="false">
+        <input id="add-logo" type="url" placeholder="Logo image URL (optional)" spellcheck="false">
+        <button id="add-btn" class="primary">＋ Add channel</button>
+      </div>
+      <ul id="custom-list" class="custom-list"></ul>
+
+      <h3>TV Guide (EPG)</h3>
+      <label for="epg-url">XMLTV guide URL (.xml or .xml.gz). Several URLs can be separated by commas.</label>
+      <div class="row">
+        <input id="epg-url" type="url" placeholder="https://epg.pw/xmltv/epg_IN.xml" spellcheck="false">
+        <button id="epg-load" class="primary">Load guide</button>
+      </div>
+      <p class="muted small">Leave empty to use the playlist's own guide (x-tvg-url) or the free India guide from epg.pw. Channels are matched by tvg-id or name.</p>
+
+      <p class="muted small">Public streams can be offline or geo-blocked; those show “No Signal”.</p>
+      <div class="row end">
+        <button id="clear-favs">Clear favorites</button>
+        <button data-close class="primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Help ============ -->
+  <div id="help" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Remote control</h2>
+        <button class="icon-btn" data-close>✕</button>
+      </div>
+      <table class="keys">
+        <tr><td><kbd>↑</kbd> <kbd>↓</kbd> / <kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Channel up / down</td></tr>
+        <tr><td><kbd>0</kbd>–<kbd>9</kbd></td><td>Go to channel number</td></tr>
+        <tr><td><kbd>L</kbd> / <kbd>Backspace</kbd></td><td>Previous channel</td></tr>
+        <tr><td><kbd>G</kbd></td><td>Show / hide channel list</td></tr>
+        <tr><td><kbd>E</kbd> / <kbd>Enter</kbd></td><td>TV Guide (programme grid)</td></tr>
+        <tr><td><kbd>I</kbd></td><td>Channel &amp; programme info</td></tr>
+        <tr><td><kbd>/</kbd></td><td>Search channels</td></tr>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd> / <kbd>-</kbd> <kbd>+</kbd></td><td>Volume</td></tr>
+        <tr><td><kbd>M</kbd></td><td>Mute</td></tr>
+        <tr><td><kbd>A</kbd></td><td>Switch audio language (when the channel has more than one)</td></tr>
+        <tr><td><kbd>S</kbd></td><td>Add / remove favorite</td></tr>
+        <tr><td><kbd>X</kbd> / ⊘ in the list</td><td>Hide channel (restore in Settings)</td></tr>
+        <tr><td><kbd>F</kbd> / double-click</td><td>Fullscreen</td></tr>
+        <tr><td><kbd>O</kbd></td><td>Settings</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="toast" hidden></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
